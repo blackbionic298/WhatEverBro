@@ -1,0 +1,19 @@
+{
+  "name": "afk-bot-for-umc",
+  "version": "1.0.0",
+  "description": "Minecraft AFK Bot for UMC server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.20.1",
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Black",
+  "license": "ISC"
+}
