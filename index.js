@@ -32,7 +32,7 @@ const CONFIG = {
   checkTimeoutInterval: 300000      // 延长到 5 分钟
 };
 
-const BOT_USERNAME = '24hOnlineLiveChatBot';
+const BOT_USERNAME = 'LiveChatBot';
 const AUTHME_PASSWORD = process.env.AUTHME_PASSWORD || 'deutschland';
 
 let bot;
