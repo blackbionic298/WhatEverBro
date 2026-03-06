@@ -26,19 +26,20 @@ setInterval(() => {
 // ===== 配置 =====
 const CONFIG = {
   host: 'umc.play.hosting',
-  port: 25565,                      // ← 去面板确认当前端口，如果变了改这里！
-  version: '1.21',                  // 强制 1.21，避免自动检测出错
+  port: 25565, // ← 去面板确认当前端口，如果变了改这里！
+  version: '1.21', // 强制 1.21，避免自动检测出错
   auth: 'offline',
-  checkTimeoutInterval: 300000      // 延长到 5 分钟
+  checkTimeoutInterval: 300000 // 延长到 5 分钟
 };
 
 const BOT_USERNAME = 'LiveChatBot';
 const AUTHME_PASSWORD = process.env.AUTHME_PASSWORD || 'deutschland';
+const ALLOWED_USER = 'black_1816'; // 只允许这个玩家使用 @aibot 命令
 
 let bot;
 let jumpInterval;
 let reconnecting = false;
-let reconnectAttempts = 0; // 新增：重连计数
+let reconnectAttempts = 0;
 
 function startBot() {
   if (reconnecting) return;
@@ -64,9 +65,9 @@ function startBot() {
       bot.chat(`/register ${AUTHME_PASSWORD} ${AUTHME_PASSWORD}`);
     }, 5000);
 
+    // AuthMe 相关消息处理
     bot.on('messagestr', (msg) => {
       const m = msg.toLowerCase();
-
       if (m.includes('/register')) {
         console.log('→ 检测到注册');
         bot.chat(`/register ${AUTHME_PASSWORD} ${AUTHME_PASSWORD}`);
@@ -87,6 +88,24 @@ function startBot() {
         reconnectAttempts = 0; // 成功进服，重置计数
       }
     });
+
+    // 新增：@aibot 复读功能，只有 black_1816 能用
+    bot.on('chat', (username, message) => {
+      // 防止自己复读自己导致死循环
+      if (username === bot.username) return;
+
+      // 只允许特定玩家使用
+      if (username.toLowerCase() !== ALLOWED_USER.toLowerCase()) return;
+
+      const prefix = '@aibot ';
+      if (message.toLowerCase().startsWith(prefix.toLowerCase())) {
+        const content = message.slice(prefix.length).trim();
+        if (content.length > 0) {
+          console.log(`[Echo命令] ${username} → ${content}`);
+          bot.chat(content);
+        }
+      }
+    });
   });
 
   // 详细 kicked 日志
@@ -101,6 +120,7 @@ function startBot() {
   });
 
   bot.on('end', () => reconnect('连接结束'));
+
   bot.on('error', (err) => {
     console.log('⚠️ 错误:', err.message || err);
     reconnect('错误: ' + (err.message || '未知'));
@@ -126,11 +146,9 @@ function reconnect(reason = '未知') {
     clearInterval(jumpInterval);
     jumpInterval = null;
   }
-
   reconnectAttempts++;
   const delay = Math.min(30000 + (reconnectAttempts - 1) * 15000, 180000); // 30s → 45s → 60s ... 最多3min
   console.log(`将在 ${delay/1000} 秒后第 ${reconnectAttempts} 次重连...`);
-
   setTimeout(() => {
     reconnecting = false;
     startBot();
