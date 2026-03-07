@@ -26,15 +26,15 @@ setInterval(() => {
 // ===== 配置 =====
 const CONFIG = {
   host: 'umc.play.hosting',
-  port: 25565, // ← 去面板确认当前端口，如果变了改这里！
-  version: '1.21', // 强制 1.21，避免自动检测出错
+  port: 25565,
+  version: '1.21',
   auth: 'offline',
-  checkTimeoutInterval: 300000 // 延长到 5 分钟
+  checkTimeoutInterval: 300000
 };
 
-const BOT_USERNAME = 'LiveChatBot';
+const BOT_USERNAME = 'HostByAI';
 const AUTHME_PASSWORD = process.env.AUTHME_PASSWORD || 'deutschland';
-const ALLOWED_USER = 'black_1816'; // 只允许这个玩家使用 @aibot 命令
+const ALLOWED_USER = 'black_1816'; // 只允许这个玩家控制 bot
 
 let bot;
 let jumpInterval;
@@ -51,23 +51,25 @@ function startBot() {
     username: BOT_USERNAME
   });
 
-  // 自动接受资源包（防插件踢）
+  // 自动接受资源包
   bot.on('resourcePack', () => {
     console.log('[资源包] 收到 → 自动接受');
     bot.acceptResourcePack();
   });
 
   bot.once('spawn', () => {
-    console.log('✅ 已进服，等待 5 秒后尝试 AuthMe（防误判）');
+    console.log('✅ 已进服，等待 5 秒后尝试 AuthMe');
     setTimeout(() => {
       reconnecting = false;
       bot.chat(`/login ${AUTHME_PASSWORD}`);
       bot.chat(`/register ${AUTHME_PASSWORD} ${AUTHME_PASSWORD}`);
     }, 5000);
 
-    // AuthMe 相关消息处理
+    // AuthMe 消息处理 + 私聊命令控制（/msg LiveChatBot !内容）
     bot.on('messagestr', (msg) => {
       const m = msg.toLowerCase();
+
+      // AuthMe 相关
       if (m.includes('/register')) {
         console.log('→ 检测到注册');
         bot.chat(`/register ${AUTHME_PASSWORD} ${AUTHME_PASSWORD}`);
@@ -85,38 +87,82 @@ function startBot() {
       ) {
         console.log('✅ AuthMe 完成，开始 AFK');
         startAntiAFK();
-        reconnectAttempts = 0; // 成功进服，重置计数
+        reconnectAttempts = 0;
+      }
+
+      // 私聊命令：/msg LiveChatBot !hello → bot 公聊 "hello"
+      // 支持多种常见格式：From xxx: !msg、xxx whispers to you: !msg、xxx -> bot: !msg
+      const whisperIndicators = ['from ', 'whispers to you:', '->', 'whisper from ', 'whispers:'];
+      let isWhisper = false;
+      let sender = '';
+      let content = '';
+
+      for (const indicator of whisperIndicators) {
+        if (m.includes(indicator)) {
+          isWhisper = true;
+          const parts = msg.split(indicator);
+          if (parts.length >= 2) {
+            sender = parts[0].trim().toLowerCase();
+            content = parts.slice(1).join(indicator).trim();
+          }
+          break;
+        }
+      }
+
+      // 备选：最常见的 "From xxx: 消息" 格式
+      if (!isWhisper && m.includes('from ') && m.includes(':')) {
+        const parts = msg.split(':');
+        if (parts.length >= 2) {
+          sender = parts[0].replace(/from /i, '').trim().toLowerCase();
+          content = parts.slice(1).join(':').trim();
+          isWhisper = true;
+        }
+      }
+
+      if (isWhisper && sender.includes(ALLOWED_USER.toLowerCase())) {
+        if (content.startsWith('!')) {
+          const commandContent = content.slice(1).trim();
+          if (commandContent.length > 0) {
+            console.log(`[私聊命令 !] ${ALLOWED_USER} → ${commandContent}`);
+            bot.chat(commandContent);
+          }
+        }
       }
     });
 
-    // 新增：@aibot 复读功能，只有 black_1816 能用
+    // 公共聊天命令：@aibot xxx 和 !home light
     bot.on('chat', (username, message) => {
-      // 防止自己复读自己导致死循环
       if (username === bot.username) return;
-
-      // 只允许特定玩家使用
       if (username.toLowerCase() !== ALLOWED_USER.toLowerCase()) return;
 
+      const msgLower = message.toLowerCase().trim();
+
+      // @aibot 复读
       const prefix = '@aibot ';
-      if (message.toLowerCase().startsWith(prefix.toLowerCase())) {
+      if (msgLower.startsWith(prefix)) {
         const content = message.slice(prefix.length).trim();
         if (content.length > 0) {
-          console.log(`[Echo命令] ${username} → ${content}`);
+          console.log(`[Echo @aibot] ${username} → ${content}`);
           bot.chat(content);
+          return;
         }
+      }
+
+      // !home light → /tpahere black_1816
+      if (msgLower === '!home light') {
+        console.log(`[命令] ${username} → !home light → 执行 /tpahere black_1816`);
+        bot.chat('/tpahere black_1816');
       }
     });
   });
 
-  // 详细 kicked 日志
   bot.on('kicked', (reason, loggedIn) => {
     console.log('❌ 被踢出！ 已登录:', loggedIn ? '是' : '否');
-    console.log('踢出原因类型:', typeof reason);
     console.log('踢出原因:', reason);
     if (typeof reason === 'object' && reason !== null) {
       console.log('踢出原因 JSON:', JSON.stringify(reason, null, 2));
     }
-    reconnect('被踢出 - 详见上面原因');
+    reconnect('被踢出');
   });
 
   bot.on('end', () => reconnect('连接结束'));
@@ -147,7 +193,7 @@ function reconnect(reason = '未知') {
     jumpInterval = null;
   }
   reconnectAttempts++;
-  const delay = Math.min(30000 + (reconnectAttempts - 1) * 15000, 180000); // 30s → 45s → 60s ... 最多3min
+  const delay = Math.min(30000 + (reconnectAttempts - 1) * 15000, 180000);
   console.log(`将在 ${delay/1000} 秒后第 ${reconnectAttempts} 次重连...`);
   setTimeout(() => {
     reconnecting = false;
