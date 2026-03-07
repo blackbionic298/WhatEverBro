@@ -25,7 +25,7 @@ setInterval(() => {
 
 // ===== 配置 =====
 const CONFIG = {
-  host: 'umc.play.hosting',
+  host: 'nolimitanarchy.com',
   port: 25565,
   version: '1.21',
   auth: 'offline',
