@@ -65,11 +65,11 @@ function startBot() {
       bot.chat(`/register ${AUTHME_PASSWORD} ${AUTHME_PASSWORD}`);
     }, 5000);
 
-    // AuthMe 消息处理 + 私聊命令控制（/msg LiveChatBot !内容）
+    // AuthMe + 私聊处理
     bot.on('messagestr', (msg) => {
       const m = msg.toLowerCase();
 
-      // AuthMe 相关
+      // AuthMe 相关（保持不变）
       if (m.includes('/register')) {
         console.log('→ 检测到注册');
         bot.chat(`/register ${AUTHME_PASSWORD} ${AUTHME_PASSWORD}`);
@@ -90,54 +90,31 @@ function startBot() {
         reconnectAttempts = 0;
       }
 
-      // 私聊命令：/msg LiveChatBot !hello → bot 公聊 "hello"
-      // 支持多种常见格式：From xxx: !msg、xxx whispers to you: !msg、xxx -> bot: !msg
-      const whisperIndicators = ['from ', 'whispers to you:', '->', 'whisper from ', 'whispers:'];
-      let isWhisper = false;
-      let sender = '';
-      let content = '';
+      // ── 针对 [black_1816 -> GleidShulkerBot] 格式的私聊 ──
+      const whisperPattern = new RegExp(`^\\[${ALLOWED_USER.toLowerCase()} -> ${BOT_USERNAME.toLowerCase()}\\]\\s*(.+)$`, 'i');
+      const match = msg.match(whisperPattern);
 
-      for (const indicator of whisperIndicators) {
-        if (m.includes(indicator)) {
-          isWhisper = true;
-          const parts = msg.split(indicator);
-          if (parts.length >= 2) {
-            sender = parts[0].trim().toLowerCase();
-            content = parts.slice(1).join(indicator).trim();
-          }
-          break;
-        }
-      }
+      if (match && match[1]) {
+        const content = match[1].trim();
 
-      // 备选：最常见的 "From xxx: 消息" 格式
-      if (!isWhisper && m.includes('from ') && m.includes(':')) {
-        const parts = msg.split(':');
-        if (parts.length >= 2) {
-          sender = parts[0].replace(/from /i, '').trim().toLowerCase();
-          content = parts.slice(1).join(':').trim();
-          isWhisper = true;
-        }
-      }
-
-      if (isWhisper && sender.includes(ALLOWED_USER.toLowerCase())) {
         if (content.startsWith('!')) {
-          const commandContent = content.slice(1).trim();
-          if (commandContent.length > 0) {
-            console.log(`[私聊命令 !] ${ALLOWED_USER} → ${commandContent}`);
-            bot.chat(commandContent);
+          const sayContent = content.slice(1).trim();
+          if (sayContent.length > 0) {
+            console.log(`[私聊 -> 自动说] ${ALLOWED_USER} → ${sayContent}`);
+            bot.chat(sayContent);
           }
         }
+        // 没有 ! 开头 → 不说话
       }
     });
 
-    // 公共聊天命令：@aibot xxx 和 !home light
+    // 公共聊天命令：@aibot xxx 和 !home light（保持不变）
     bot.on('chat', (username, message) => {
       if (username === bot.username) return;
       if (username.toLowerCase() !== ALLOWED_USER.toLowerCase()) return;
 
       const msgLower = message.toLowerCase().trim();
 
-      // @aibot 复读
       const prefix = '@aibot ';
       if (msgLower.startsWith(prefix)) {
         const content = message.slice(prefix.length).trim();
@@ -148,7 +125,6 @@ function startBot() {
         }
       }
 
-      // !home light → /tpahere black_1816
       if (msgLower === '!home spawn') {
         console.log(`[命令] ${username} → !home spawn → 执行 /tpahere black_1816`);
         bot.chat('/tpahere black_1816');
