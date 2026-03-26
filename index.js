@@ -25,14 +25,14 @@ setInterval(() => {
 
 // ===== 配置 =====
 const CONFIG = {
-  host: 'umc.play.hosting',
+  host: 'ua.play.hosting',
   port: 25565,
   version: '1.21',
   auth: 'offline',
   checkTimeoutInterval: 300000
 };
 
-const BOT_USERNAME = 'LiveChatBot';
+const BOT_USERNAME = 'GleidBot';
 const AUTHME_PASSWORD = process.env.AUTHME_PASSWORD || 'deutschland';
 const ALLOWED_USER = 'black_1816','GleidShulkerBox'; // 只允许这个玩家控制 bot
 
