@@ -34,7 +34,7 @@ const CONFIG = {
 
 const BOT_USERNAME = 'GleidBot';
 const AUTHME_PASSWORD = process.env.AUTHME_PASSWORD || 'deutschland';
-const ALLOWED_USER = 'black_1816','GleidShulkerBox'; // 只允许这个玩家控制 bot
+const ALLOWED_USER = 'black_1816'; // 只允许这个玩家控制 bot
 
 let bot;
 let jumpInterval;
